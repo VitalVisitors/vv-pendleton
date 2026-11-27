@@ -410,7 +410,21 @@ function startChorus() {
   // Real chorus audio if the file exists, otherwise a recreated one
   const au = new Audio(); au.preload = "auto"; au.volume = CHORUS_VOLUME;
   let decided = false;
-  const useSynth = () => { if (decided || stopped) return; decided = true; synth(); };
+  const SAMPLE = {"order": ["Carolina Chickadee", "Carolina Wren", "Tufted Titmouse", "Northern Cardinal", "White-breasted Nuthatch"], "clip_sec": 4, "caption": "Sample · birds to expect at Pendleton Library", "note": "Sample birdsong, not recorded at Pendleton Library. These are birds from your area that you can expect to hear once your unit arrives. Recordings: Chase Harris, via iNaturalist (CC0); trimmed and levelled."};
+  const useSynth = () => {
+    if (decided || stopped) return; decided = true;
+    let settled = false;
+    au.addEventListener("canplay", () => {
+      if (settled || stopped) return; settled = true; realAudio = au;
+      note.textContent = SAMPLE.note;
+      setLower(SAMPLE.caption, [...new Set(SAMPLE.order)], SAMPLE.caption);
+      showChips(SAMPLE.order, SAMPLE.clip_sec);
+      au.currentTime = 0; au.play().catch(useSynthForce);
+    }, { once: true });
+    au.addEventListener("error", () => { if (settled || stopped) return; settled = true; synth(); }, { once: true });
+    timers.push(setTimeout(() => { if (settled || stopped) return; settled = true; synth(); }, 4000));
+    au.src = "sample-chorus.mp3";
+  };
   const useReal = () => {
     if (decided || stopped) return; decided = true; realAudio = au;
     const today = new Date().toLocaleDateString("en-CA");

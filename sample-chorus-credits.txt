@@ -1,0 +1,7 @@
+Sample birdsong on this kiosk. Each clip is a four-second excerpt, trimmed and levelled, from an iNaturalist recording.
+
+Carolina Chickadee: Chase Harris, https://www.inaturalist.org/observations/360780240, CC0
+Carolina Wren: Chase Harris, https://www.inaturalist.org/observations/351819570, CC0
+Tufted Titmouse: Chase Harris, https://www.inaturalist.org/observations/350373135, CC0
+Northern Cardinal: Chase Harris, https://www.inaturalist.org/observations/361325284, CC0
+White-breasted Nuthatch: Chase Harris, https://www.inaturalist.org/observations/346372834, CC0
