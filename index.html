@@ -205,7 +205,7 @@ h1 { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 5.5vw
   <div class="drawing" id="drawing" hidden><img id="drawingImg" alt="Hand-drawn illustration of today's birds"></div>
   <div class="gallery" id="gallery"></div>
   <div class="today-sum" id="todayNote">Sample day shown.</div>
-  <div class="music-credit">Bird art: <i>Fugleramme</i> by Arne Giacomo Munthe-Kaas, from plates by J. J. Audubon, L. A. Fuertes and others (CC BY-SA 4.0) · Music: <span id="musicCredit">Vivaldi, “Spring,” John Harrison, violin, Wichita State University Chamber Players (CC BY-SA)</span></div>
+  <div class="music-credit">Bird art: <i>Fugleramme</i> by Arne Giacomo Munthe-Kaas, from plates by J. J. Audubon, L. A. Fuertes and others (CC BY-SA 4.0); other birds painted for VitalVisitors with AI · Music: <span id="musicCredit">Vivaldi, “Spring,” John Harrison, violin, Wichita State University Chamber Players (CC BY-SA)</span></div>
 </div>
 
 <script>
@@ -386,7 +386,7 @@ async function loadLive() {
 // Until this site's unit sends its own list: birds heard in the last day by BirdWeather stations nearby,
 // with the hours each was heard most. Read straight from BirdWeather's public service; widens the search if it is quiet.
 let NEARBY = null;
-const NEAR = {"lat": 34.64, "lon": -82.78, "painted": ["american-goldfinch", "carolina-chickadee", "carolina-wren", "tufted-titmouse", "white-breasted-nuthatch"]};
+const NEAR = {"lat": 34.64, "lon": -82.78, "painted": ["american-crow", "american-goldfinch", "american-robin", "barred-owl", "black-billed-magpie", "black-capped-chickadee", "blue-jay", "boreal-chickadee", "bushtit", "cackling-goose", "canada-jay", "carolina-chickadee", "carolina-wren", "common-raven", "common-redpoll", "dark-eyed-junco", "downy-woodpecker", "eastern-bluebird", "eastern-phoebe", "golden-crowned-kinglet", "hairy-woodpecker", "house-finch", "house-sparrow", "ladder-backed-woodpecker", "lesser-goldfinch", "mountain-chickadee", "mourning-dove", "northern-cardinal", "northern-flicker", "northern-mockingbird", "pine-grosbeak", "pygmy-nuthatch", "red-bellied-woodpecker", "red-breasted-nuthatch", "song-sparrow", "spotted-towhee", "stellers-jay", "tufted-titmouse", "western-meadowlark", "white-breasted-nuthatch", "white-crowned-sparrow", "white-throated-sparrow", "white-winged-crossbill", "woodhouses-scrub-jay", "yellow-rumped-warbler"]};
 async function loadNearby() {
   if (LIVE && Array.isArray(LIVE.species)) { NEARBY = null; return; }
   for (const km of [30, 75, 150, 300, 600]) {
