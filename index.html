@@ -412,7 +412,9 @@ async function loadNearby() {
     } catch (e) { return; }                                             // offline: keep whatever was shown before
   }
 }
-loadLive().then(loadNearby); setInterval(loadLive, 5 * 60 * 1000); setInterval(loadNearby, 30 * 60 * 1000);
+// A tap on Today's Bird Species waits for the first answer (up to 8 seconds) so it never shows another place's sample birds.
+const nearbyFirst = Promise.race([loadLive().then(loadNearby), new Promise(done => setTimeout(done, 8000))]);
+setInterval(loadLive, 5 * 60 * 1000); setInterval(loadNearby, 30 * 60 * 1000);
 
 // Reload the whole page once a day (overnight, on the start screen) to pick up any page changes
 const bootDay = new Date().toDateString();
@@ -933,5 +935,5 @@ function startToday() {
 
 document.getElementById("tChorus").addEventListener("click", startChorus);
 document.getElementById("tReel").addEventListener("click", startReel);
-document.getElementById("tToday").addEventListener("click", startToday);
+document.getElementById("tToday").addEventListener("click", () => nearbyFirst.then(startToday));
 </script>
