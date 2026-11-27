@@ -165,15 +165,15 @@ h1 { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 5.5vw
   </header>
   <div class="tiles">
     <button class="tile" id="tChorus" aria-label="Sunrise and dawn chorus">
-      <img class="paint" src="tile-dawn.jpg" alt="" aria-hidden="true">
+      <img class="paint" src="tile-dawn.jpg?v=c39bbfe8" alt="" aria-hidden="true">
       <span class="tile-label">Dawn Chorus<br>at Sunrise</span>
     </button>
     <button class="tile" id="tReel" aria-label="Feeder highlights" disabled>
-      <img class="paint" src="tile-videos.jpg" alt="" aria-hidden="true"><span class="playmark" aria-hidden="true"></span><span class="soon-badge" id="reelSoon">Coming soon</span>
+      <img class="paint" src="tile-videos.jpg?v=5e8e3774" alt="" aria-hidden="true"><span class="playmark" aria-hidden="true"></span><span class="soon-badge" id="reelSoon">Coming soon</span>
       <span class="tile-label">Videos at<br>Bird Feeder</span>
     </button>
     <button class="tile" id="tToday" aria-label="Today's birds">
-      <img class="paint" src="tile-birds.jpg" alt="" aria-hidden="true">
+      <img class="paint" src="tile-birds.jpg?v=ae62469b" alt="" aria-hidden="true">
       <span class="tile-label">Today’s Bird<br>Species</span>
     </button>
   </div>
@@ -453,7 +453,7 @@ function startChorus() {
     }, { once: true });
     au.addEventListener("error", () => { if (settled || stopped) return; settled = true; synth(); }, { once: true });
     timers.push(setTimeout(() => { if (settled || stopped) return; settled = true; synth(); }, 4000));
-    au.src = "sample-chorus.mp3";
+    au.src = "sample-chorus.mp3?v=fc5cca43";
   };
   const useReal = () => {
     if (decided || stopped) return; decided = true; realAudio = au;
@@ -577,7 +577,7 @@ function startReel() {
   const timers = [];
   let stopped = false;
   // Until the feeder camera has made a reel, show the painting with a short note
-  reel.innerHTML = `<div class="soon-view"><img src="tile-videos.jpg" alt=""><div class="lower">Videos of birds at the Pendleton Library feeder are coming soon. The camera is being set up.</div></div>`;
+  reel.innerHTML = `<div class="soon-view"><img src="tile-videos.jpg?v=5e8e3774" alt=""><div class="lower">Videos of birds at the Pendleton Library feeder are coming soon. The camera is being set up.</div></div>`;
   const iv = 0;
   tryVideo(vid, bust(MEDIA.reel)).then(ok => {
     if (ok && !stopped) {
