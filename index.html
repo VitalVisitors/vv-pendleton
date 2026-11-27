@@ -156,6 +156,7 @@ h1 { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 5.5vw
   .slide .stage, .chip { animation: none; }
   .slide { transition: none; }
 }
+.tile:disabled { cursor: default; } .tile:disabled .paint { filter: grayscale(.6) brightness(.75); } .tile:disabled .playmark { display: none; }
 </style>
 
 <div id="home" class="screen">
@@ -167,7 +168,7 @@ h1 { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 5.5vw
       <img class="paint" src="tile-dawn.jpg" alt="" aria-hidden="true">
       <span class="tile-label">Dawn Chorus<br>at Sunrise</span>
     </button>
-    <button class="tile" id="tReel" aria-label="Feeder highlights">
+    <button class="tile" id="tReel" aria-label="Feeder highlights" disabled>
       <img class="paint" src="tile-videos.jpg" alt="" aria-hidden="true"><span class="playmark" aria-hidden="true"></span><span class="soon-badge" id="reelSoon">Coming soon</span>
       <span class="tile-label">Videos at<br>Bird Feeder</span>
     </button>
@@ -306,9 +307,38 @@ async function loadLive() {
     if (m && m.title) document.getElementById("musicCredit").textContent =
       `${m.composer}, “${m.title},” ${m.by}` + (m.license ? ` (${m.license})` : "");
   } catch (e) { /* keep the credit already on the page */ }
-  document.getElementById("reelSoon").hidden = !!REEL_INFO;
+  document.getElementById("reelSoon").hidden = !!REEL_INFO; document.getElementById("tReel").disabled = !REEL_INFO;
 }
-loadLive(); setInterval(loadLive, 5 * 60 * 1000);
+// Until this site's unit sends its own list: birds heard in the last day by BirdWeather stations nearby,
+// with the hours each was heard most. Read straight from BirdWeather's public service; widens the search if it is quiet.
+let NEARBY = null;
+const NEAR = {"lat": 34.64, "lon": -82.78, "painted": ["american-goldfinch", "carolina-chickadee", "carolina-wren", "tufted-titmouse", "white-breasted-nuthatch"]};
+async function loadNearby() {
+  if (LIVE && Array.isArray(LIVE.species)) { NEARBY = null; return; }
+  for (const km of [30, 75, 150]) {
+    try {
+      const dla = km / 111, dlo = km / (111 * Math.cos(NEAR.lat * Math.PI / 180));
+      const query = `{ timeOfDayDetectionCounts(period: {count: 1, unit: "day"}, ne: {lat: ${(NEAR.lat + dla).toFixed(3)}, lon: ${(NEAR.lon + dlo).toFixed(3)}}, sw: {lat: ${(NEAR.lat - dla).toFixed(3)}, lon: ${(NEAR.lon - dlo).toFixed(3)}}) { count species { commonName } bins { key count } } }`;
+      const r = await fetch("https://app.birdweather.com/graphql", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query }) });
+      const rows = ((await r.json()).data || {}).timeOfDayDetectionCounts || [];
+      const species = rows.filter(x => x.species && x.species.commonName && x.count >= 3).sort((a, b) => b.count - a.count).slice(0, 8).map(x => {
+        const hours = new Array(24).fill(0);
+        (x.bins || []).forEach(b => { hours[Math.floor(b.key) % 24] += b.count; });
+        const windowAt = p => { let a = p, b = p + 1;                    // the busiest hour, widened over busy neighbours
+          while (b - a < 3 && a > 0 && hours[a - 1] >= hours[p] / 2) a--;
+          while (b - a < 3 && b < 24 && hours[b] >= hours[p] / 2) b++;
+          return [a, b]; };
+        const peak = hours.indexOf(Math.max(...hours)), first = windowAt(peak), best = [first];
+        let p2 = -1;
+        hours.forEach((n, h) => { if ((h < first[0] - 1 || h > first[1]) && n >= hours[peak] * 0.6 && (p2 < 0 || n > hours[p2])) p2 = h; });
+        if (p2 >= 0) { const w = windowAt(p2); if (w[1] < first[0] || w[0] > first[1]) best.push(w); }   // not if it runs into the first
+        return { name: x.species.commonName, count: x.count, best: best.sort((a, b) => a[0] - b[0]) };
+      });
+      if (species.length >= 3) { NEARBY = { km, species }; return; }
+    } catch (e) { return; }                                             // offline: keep whatever was shown before
+  }
+}
+loadLive().then(loadNearby); setInterval(loadLive, 5 * 60 * 1000); setInterval(loadNearby, 30 * 60 * 1000);
 
 // Reload the whole page once a day (overnight, on the start screen) to pick up any page changes
 const bootDay = new Date().toDateString();
@@ -809,13 +839,14 @@ function startToday() {
   const list = live
     ? LIVE.species.map(b => ({ name: b.name, count: b.count || 1, first: b.first, best: Array.isArray(b.best) ? b.best : [],
         img: bust("birds/" + (b.slug || slugOf(b.name)) + ".jpg"), art: b.art ? bust(b.art) : "", mass: b.mass_g }))
+    : NEARBY ? NEARBY.species.map(b => ({ name: b.name, count: b.count, best: b.best, img: "", art: NEAR.painted.includes(slugOf(b.name)) ? "birds/" + slugOf(b.name) + ".webp" : "" }))
     : TODAY.map(b => ({ name: SPECIES[b.sp].name, count: b.n, best: SAMPLE_BEST[b.sp], img: "birds/" + slugOf(SPECIES[b.sp].name) + ".jpg",
         art: "birds/" + slugOf(SPECIES[b.sp].name) + ".webp", mass: SAMPLE_MASS[b.sp] }));
   // One screenful of birds, fading in one card at a time; any others are listed under "Also heard"
   const g = renderGallery(list), shown = g.pages[0] || [];
   const more = list.filter(b => !shown.includes(b)).sort((a, b) => b.count - a.count).map(b => b.name);
   const secs = Math.max(VIEW_SEC, (shown.length - 1) * CARD_STEP + 10);
-  const left = live ? `<span><b>${list.length}</b> kind${list.length === 1 ? "" : "s"} of bird heard ${list.length ? "so far " : ""}today</span>` : `<span>Sample day shown</span>`;
+  const left = live ? `<span><b>${list.length}</b> kind${list.length === 1 ? "" : "s"} of bird heard ${list.length ? "so far " : ""}today</span>` : NEARBY ? `<span>Heard in the last day within about ${NEARBY.km} km of Pendleton Library, by BirdWeather stations</span><span>Your own birds will show here once your unit arrives</span>` : `<span>Sample day shown</span>`;
   const mid = more.length ? `<span>Also heard: ${more.map(esc).join(", ")}</span>` : "";
   const right = live && LIVE.updated ? `<span>Updated ${fmtTime(LIVE.updated.slice(11, 16))}</span>` : "";
   note.innerHTML = left + mid + right;
