@@ -491,7 +491,7 @@ function startChorus() {
       cv.hidden = true; vid.hidden = false; vid.currentTime = 0; vid.play().catch(() => {});
       const today = new Date().toLocaleDateString("en-CA");
       const when = SUNRISE_INFO && SUNRISE_INFO.date && SUNRISE_INFO.date !== today ? `on ${fmtDay(SUNRISE_INFO.date)}` : "this morning";
-      place.textContent = `Sunrise at ${SUNRISE_INFO && SUNRISE_INFO.place ? SUNRISE_INFO.place : "Look Rock, Great Smoky Mountains"} ${when}`;
+      place.textContent = `Sunrise at ${SUNRISE_INFO && SUNRISE_INFO.place ? SUNRISE_INFO.place : "Look Rock, Great Smoky Mountains"} ${when} · Source: ${SUNRISE_INFO && SUNRISE_INFO.credit ? SUNRISE_INFO.credit : "National Park Service"}`;
       place.hidden = false;
       // Clock showing when each webcam photo was taken, ticking forward as the timelapse plays
       const times = SUNRISE_INFO && Array.isArray(SUNRISE_INFO.times) ? SUNRISE_INFO.times : [];
