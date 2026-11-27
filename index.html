@@ -389,7 +389,7 @@ let NEARBY = null;
 const NEAR = {"lat": 34.64, "lon": -82.78, "painted": ["american-goldfinch", "carolina-chickadee", "carolina-wren", "tufted-titmouse", "white-breasted-nuthatch"]};
 async function loadNearby() {
   if (LIVE && Array.isArray(LIVE.species)) { NEARBY = null; return; }
-  for (const km of [30, 75, 150]) {
+  for (const km of [30, 75, 150, 300, 600]) {
     try {
       const dla = km / 111, dlo = km / (111 * Math.cos(NEAR.lat * Math.PI / 180));
       const query = `{ timeOfDayDetectionCounts(period: {count: 1, unit: "day"}, ne: {lat: ${(NEAR.lat + dla).toFixed(3)}, lon: ${(NEAR.lon + dlo).toFixed(3)}}, sw: {lat: ${(NEAR.lat - dla).toFixed(3)}, lon: ${(NEAR.lon - dlo).toFixed(3)}}) { count species { commonName } bins { key count } } }`;
@@ -412,8 +412,8 @@ async function loadNearby() {
     } catch (e) { return; }                                             // offline: keep whatever was shown before
   }
 }
-// A tap on Today's Bird Species waits for the first answer (up to 8 seconds) so it never shows another place's sample birds.
-const nearbyFirst = Promise.race([loadLive().then(loadNearby), new Promise(done => setTimeout(done, 8000))]);
+// A tap on Today's Bird Species waits for the first answer (up to 12 seconds) so it never shows another place's sample birds.
+const nearbyFirst = Promise.race([loadLive().then(loadNearby), new Promise(done => setTimeout(done, 12000))]);
 setInterval(loadLive, 5 * 60 * 1000); setInterval(loadNearby, 30 * 60 * 1000);
 
 // Reload the whole page once a day (overnight, on the start screen) to pick up any page changes
