@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Built by kiosks/build.py for pendleton (VV-0014). Edit the template or sites.json, not this file. -->
+<title>Pendleton Library Bird Kiosk</title>
+<!-- Icons: Phosphor Icons (MIT), phosphoricons.com -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap">
+<style>
+/* Layout: one calm home screen with three huge touch tiles; each tile opens a full-screen view that returns home on its own. */
+:root {
+  --bg: #e9f0ec;
+  --panel: #ffffff;
+  --fg: #1b2a26;
+  --muted: #536a61;
+  --pine: #2e5a4c;
+  --gold: #e2b52a;
+  --gold-ink: #2a2206;
+  --line: #c9d7d0;
+  --display: "Nunito", "Segoe UI", system-ui, sans-serif;
+  --body: "Nunito", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111916; --panel: #1b2622; --fg: #e7efe9; --muted: #9fb4aa;
+    --pine: #86c2ac; --gold: #e8bf45; --gold-ink: #241c03; --line: #2d3c37;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111916; --panel: #1b2622; --fg: #e7efe9; --muted: #9fb4aa;
+  --pine: #86c2ac; --gold: #e8bf45; --gold-ink: #241c03; --line: #2d3c37;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+/* App-style: the page itself never scrolls; each screen fills the window */
+html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+body {
+  height: 100dvh; margin: 0; touch-action: manipulation;
+  background: var(--bg); color: var(--fg);
+  font-family: var(--body); font-size: clamp(18px, 2.2vw, 24px); line-height: 1.45;
+  padding-inline: clamp(16px, 4vw, 48px); padding-block: clamp(16px, 3vw, 36px);
+  box-sizing: border-box; -webkit-user-select: none; user-select: none;
+}
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 4px solid var(--gold); outline-offset: 4px; }
+
+.screen { display: flex; flex-direction: column; gap: clamp(12px, 2.4vw, 28px); height: 100%; max-width: 1200px; margin: 0 auto; overflow-y: auto; scrollbar-width: none; }
+.screen::-webkit-scrollbar { display: none; }
+#home { justify-content: space-between; }
+
+header.top { text-align: center; }
+.place { font-size: .8em; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 5.5vw, 64px); line-height: 1.05; margin: 0; text-wrap: balance; }
+.clock { text-align: center; font-variant-numeric: tabular-nums; }
+.clock b { display: block; font-family: var(--display); font-weight: 800; font-size: clamp(24px, 3.2vw, 38px); color: var(--muted); }
+.clock span { color: var(--muted); }
+
+.sample-note { align-self: flex-start; background: var(--panel); border: 2px dashed var(--line); border-radius: 999px; padding: .3em .9em; color: var(--muted); font-size: .8em; }
+
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 2.5vw, 28px); width: min(100%, calc((100dvh - clamp(200px, 30vh, 290px)) * 3 + 56px)); margin: 0 auto; align-items: center; }
+.tile {
+  position: relative; display: block; width: 100%; padding: 0; aspect-ratio: 1 / 1; max-width: 100%; overflow: hidden;
+  background: var(--panel); border: 3px solid var(--line); border-radius: 28px;
+  transition: transform .15s ease, border-color .15s ease;
+}
+.tile:active { transform: scale(.98); border-color: var(--pine); }
+.tile .paint { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s ease; }
+.tile:active .paint { transform: scale(1.03); }
+.tile-label { position: absolute; left: 0; right: 0; bottom: 0; padding: .45em .6em .5em; display: flex; align-items: center; justify-content: center; text-align: center; font-family: var(--display); font-weight: 800; font-size: clamp(13px, 1.75vw, 22px); line-height: 1.12; color: #f8f5ec; background: rgba(8, 14, 12, .66); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.tile .playmark { position: absolute; left: 70%; top: 38%; width: 22%; aspect-ratio: 1 / 1; transform: translate(-50%, -50%); border-radius: 50%; background: rgba(248, 245, 236, .78); box-shadow: 0 6px 22px rgba(0, 0, 0, .25); }
+.tile .soon-badge { position: absolute; top: 7%; left: 50%; transform: translateX(-50%); white-space: nowrap; background: var(--gold); color: var(--gold-ink); font-family: var(--display); font-weight: 800; font-size: clamp(12px, 1.5vw, 19px); padding: .25em .9em; border-radius: 999px; box-shadow: 0 4px 14px rgba(0, 0, 0, .2); }
+.tile .playmark::after { content: ""; position: absolute; left: 38%; top: 28%; width: 34%; height: 44%; background: rgba(8, 14, 12, .78); clip-path: polygon(0 0, 100% 50%, 0 100%); }
+
+/* sub views */
+.view-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+.view-head h2 { font-family: var(--display); font-weight: 800; font-size: clamp(30px, 4.6vw, 54px); margin: 0; line-height: 1.1; }
+.home-btn { background: var(--pine); color: var(--bg); border: 0; border-radius: 999px; padding: .6em 1.4em; font-weight: 700; font-size: 1.05em; }
+
+.progress { height: 14px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0; background: var(--pine); }
+
+/* dawn chorus */
+.chorus { display: flex; justify-content: center; align-items: center; width: 100%; flex: 1; }
+.sky { position: relative; border-radius: 28px; overflow: hidden; aspect-ratio: 16 / 9; width: min(100%, 1100px, calc((100vh - 220px) * 16 / 9)); max-width: 100%; background: linear-gradient(#2b3d5c, #c98d5e 75%, #f2c46d); }
+.sky canvas, .sky video { width: 100%; height: 100%; display: block; object-fit: cover; }
+/* Full-width bars across the top and bottom of the sunrise picture, one type size and color */
+.sky .bug, .sky .lower { position: absolute; left: 0; right: 0; padding: .6em 1.2em; font-size: .8em; font-weight: 700; line-height: 1.3; color: #f6f3ea; background: rgba(8, 14, 12, .7); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.sky .bug.topbar { top: 0; padding-right: 7em; }
+.sky .bug.time { top: 0; left: auto; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; font-variant-numeric: tabular-nums; }
+.sky .lower { bottom: 0; }
+.sky .lower .kicker { display: none; }
+.reel #reel { position: absolute; inset: 0; }
+.soon-view { position: absolute; inset: 0; }
+.soon-view img { width: 100%; height: 100%; object-fit: cover; display: block; animation: slowzoom 20s ease-in-out both; }
+@keyframes slowzoom { from { transform: scale(1.06) translateX(-2%); } to { transform: scale(1.12) translateX(2%); } }
+.reel video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+.drawing { background: var(--panel); border: 2px solid var(--line); border-radius: 20px; padding: 12px; }
+.drawing img { display: block; width: 100%; max-height: 60vh; object-fit: contain; border-radius: 12px; }
+.heard h3 { margin: 0 0 .5em; font-size: 1em; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip { display: inline-flex; align-items: center; gap: .5em; background: var(--panel); border: 2px solid var(--line); border-radius: 999px; padding: .35em .9em .35em .4em; animation: pop .4s ease both; }
+.chip svg { width: 44px; height: 36px; }
+@keyframes pop { from { transform: scale(.7); opacity: 0; } to { transform: none; opacity: 1; } }
+.recorded { color: var(--muted); margin-top: 1em; }
+
+/* reel */
+.sky.reel { background: var(--panel); }
+.slide { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transition: opacity .8s ease; }
+.slide.on { opacity: 1; }
+.slide .stage { width: 62%; max-width: 520px; animation: drift 5.5s ease-in-out both; }
+@keyframes drift { from { transform: scale(1) translateX(-3%); } to { transform: scale(1.08) translateX(3%); } }
+.slide .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: .9em 1.2em; background: linear-gradient(transparent, color-mix(in srgb, var(--panel) 92%, transparent) 35%); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline; }
+.slide .cap b { font-family: var(--display); font-weight: 800; font-size: 1.4em; }
+.slide .cap span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.feeder-scene { width: 100%; height: auto; }
+
+/* today's birds: a watercolor portrait of each bird heard today, with the best time to go out and look */
+.gallery { display: grid; grid-template-columns: repeat(var(--cols, 3), var(--cardw, 300px)); gap: var(--gap, 20px);
+  justify-content: center; align-content: center; flex: 1 1 0; min-height: 0; overflow: hidden; }
+/* Fugleramme plates: a hand-coloured cut-out bird on warm paper. Each one is sketched in pencil, washed in with
+   watercolor, and then holds perfectly still so it stays sharp (the drawing is done in paintPlate below) */
+.bird .art.plate { display: grid; place-items: center; overflow: hidden;
+  background-color: #f3ecda;
+  background-image: radial-gradient(120% 95% at 50% 40%, rgba(255, 252, 244, .75) 0 40%, rgba(150, 120, 70, .16) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .38 0 0 0 0 .26 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.bird .art.plate .holder { position: absolute; inset: 0; width: 100%; height: 100%; padding: 5% 4% 6%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
+.bird .art.plate img.cut { position: static; width: auto; height: auto; max-width: calc(var(--s, .85) * 96%); max-height: calc(var(--s, .85) * 94%); min-width: 0; min-height: 0; flex: none; object-fit: contain;
+  opacity: 0; transition: opacity .5s ease; }
+.bird .art.plate canvas.paintcv { position: absolute; pointer-events: none; filter: drop-shadow(0 3px 4px rgba(70, 50, 20, .18)); }
+.bird .art.plate .label { position: absolute; left: 0; right: 0; bottom: 0; background: none; color: #3d4a3a; -webkit-backdrop-filter: none; backdrop-filter: none; font-size: .78em; padding: 0 .6em .35em; }
+.gallery.fade { opacity: 0; }
+.gallery { transition: opacity .6s ease; }
+.bird.wait { opacity: 0; transform: translateY(14px); }
+.bird.in { opacity: 1; transform: none; transition: opacity 1.4s ease, transform 1.4s ease; }
+.bird { display: flex; flex-direction: column; background: var(--panel); border: 3px solid var(--line); border-radius: 24px; overflow: hidden; }
+.bird .art { position: relative; flex: none; aspect-ratio: 4 / 3; background: #efe8d8; overflow: hidden; }
+.bird .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.bird .art .label { position: absolute; left: 0; right: 0; bottom: 0; padding: .35em .6em .4em; text-align: center; font-family: var(--display); font-weight: 800; font-size: .8em; line-height: 1.15; color: #f8f5ec; background: rgba(8, 14, 12, .62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.bird .art.blank { display: grid; place-items: center; background: radial-gradient(120% 90% at 30% 25%, #f6f1e4 0 45%, #e9e0cb 100%); }
+.bird .art.blank .label { position: static; background: none; color: var(--pine); font-size: 1.15em; padding: 0 .8em; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.bird .when { padding: .45em .8em .6em; text-align: center; }
+.bird .when .pname { display: block; font-family: var(--display); font-weight: 800; font-size: .92em; line-height: 1.15; margin-bottom: .25em; }
+.bird .when small { display: block; white-space: nowrap; color: var(--muted); font-size: .62em; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+.bird .when b { display: block; font-family: var(--display); font-weight: 800; font-size: 1em; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.tl-empty { margin: auto; text-align: center; color: var(--muted); grid-column: 1 / -1; padding: 2em 0; }
+.tl-empty b { display: block; font-family: var(--display); font-size: 1.3em; color: var(--fg); }
+.today-sum { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 18px; color: var(--muted); font-size: .8em; }
+.today-sum b { color: var(--fg); }
+.music-credit { color: var(--muted); font-size: .6em; text-align: center; opacity: .8; }
+.idle-note { color: var(--muted); font-size: .8em; text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .slide .stage, .chip { animation: none; }
+  .slide { transition: none; }
+}
+</style>
+
+<div id="home" class="screen">
+  <header class="top">
+    <h1>Birds at Pendleton Library</h1>
+  </header>
+  <div class="tiles">
+    <button class="tile" id="tChorus" aria-label="Sunrise and dawn chorus">
+      <img class="paint" src="tile-dawn.jpg" alt="" aria-hidden="true">
+      <span class="tile-label">Dawn Chorus<br>at Sunrise</span>
+    </button>
+    <button class="tile" id="tReel" aria-label="Feeder highlights">
+      <img class="paint" src="tile-videos.jpg" alt="" aria-hidden="true"><span class="playmark" aria-hidden="true"></span><span class="soon-badge" id="reelSoon">Coming soon</span>
+      <span class="tile-label">Videos at<br>Bird Feeder</span>
+    </button>
+    <button class="tile" id="tToday" aria-label="Today's birds">
+      <img class="paint" src="tile-birds.jpg" alt="" aria-hidden="true">
+      <span class="tile-label">Today’s Bird<br>Species</span>
+    </button>
+  </div>
+  <div class="clock"><b id="clockDate"></b><span id="clockTime" hidden></span></div>
+</div>
+
+<div id="vChorus" class="screen" hidden>
+  <div class="view-head"><h2>Dawn Chorus at Sunrise</h2><button class="home-btn" data-home>Back to start</button></div>
+  <div class="progress"><i id="chorusBar"></i></div>
+  <div class="chorus">
+    <div class="sky"><canvas id="skyCanvas" width="800" height="600"></canvas><video id="sunVideo" muted playsinline preload="auto" hidden></video><div class="bug topbar" id="sunPlace" hidden></div><div class="bug time" id="sunTime" hidden></div><div class="lower" id="sunCap" hidden><div class="kicker" id="capKicker"></div><div class="headline" id="capHead"></div></div></div>
+    <div class="heard" hidden>
+      <h3>Singing now</h3>
+      <div class="chips" id="chips"></div>
+      <p class="recorded" id="chorusNote">Recorded outside at sunrise. This preview plays a recreated chorus.</p>
+    </div>
+  </div>
+</div>
+
+<div id="vReel" class="screen" hidden>
+  <div class="view-head"><h2>Videos at Bird Feeder</h2><button class="home-btn" data-home>Back to start</button></div>
+  <div class="progress"><i id="reelBar"></i></div>
+  <div class="chorus"><div class="sky reel"><div id="reel"></div><video id="reelVideo" muted playsinline preload="auto" hidden></video><div class="bug topbar" id="reelPlace" hidden></div><div class="bug time" id="reelTime" hidden></div></div></div>
+</div>
+
+<div id="vToday" class="screen" hidden>
+  <div class="view-head"><h2>Today’s Bird Species</h2><button class="home-btn" data-home>Back to start</button></div>
+  <div class="progress"><i id="todayBar"></i></div>
+  <div class="drawing" id="drawing" hidden><img id="drawingImg" alt="Hand-drawn illustration of today's birds"></div>
+  <div class="gallery" id="gallery"></div>
+  <div class="today-sum" id="todayNote">Sample day shown.</div>
+  <div class="music-credit">Bird art: <i>Fugleramme</i> by Arne Giacomo Munthe-Kaas, from plates by J. J. Audubon, L. A. Fuertes and others (CC BY-SA 4.0) · Music: <span id="musicCredit">Vivaldi, “Spring,” John Harrison, violin, Wichita State University Chamber Players (CC BY-SA)</span></div>
+</div>
+
+<script>
+// ---------- Bird illustrations (simple, friendly field-guide style) ----------
+const SPECIES = {
+  cardinal:  { name: "Northern Cardinal",      body:"#c4282d", belly:"#d8413f", head:"#c4282d", wing:"#9e1f24", tail:"#9e1f24", beak:"#f0883a", crest:true, mask:"#1b1b1b" },
+  chickadee: { name: "Carolina Chickadee",     body:"#9aa3a6", belly:"#f1ece2", head:"#f5f2ec", wing:"#7a8488", tail:"#6e777b", beak:"#2a2a2a", cap:"#1c1c1c", bib:"#1c1c1c" },
+  titmouse:  { name: "Tufted Titmouse",        body:"#a8b0b8", belly:"#efeae3", head:"#a8b0b8", wing:"#8e969e", tail:"#878f97", beak:"#2a2a2a", crest:true, flank:"#d99f74" },
+  wren:      { name: "Carolina Wren",          body:"#a05d2d", belly:"#e7c290", head:"#a05d2d", wing:"#7c4421", tail:"#7c4421", beak:"#5d4c3c", brow:"#f6efe2", cocked:true },
+  goldfinch: { name: "American Goldfinch",     body:"#b8a54a", belly:"#e4dba8", head:"#b8a54a", wing:"#2a2a2a", tail:"#2a2a2a", beak:"#d7a35a", bars:"#f3efe0" },
+  finch:     { name: "House Finch",            body:"#a78c73", belly:"#ebdfcf", head:"#d14649", wing:"#8a6f57", tail:"#7d644e", beak:"#8a7a6a" },
+  downy:     { name: "Downy Woodpecker",       body:"#f2f0ea", belly:"#f7f5f0", head:"#f7f5f0", wing:"#222222", tail:"#222222", beak:"#333333", cap:"#222222", nape:"#d23a3a", bars:"#f7f5f0" },
+  nuthatch:  { name: "White-breasted Nuthatch", body:"#8ea2b6", belly:"#fafafa", head:"#fafafa", wing:"#6f88a2", tail:"#5d7186", beak:"#2a2a2a", cap:"#1e1e1e" }
+};
+
+function birdSVG(key, opts = {}) {
+  const s = SPECIES[key];
+  const tilt = s.cocked ? -12 : 0;
+  let g = "";
+  if (opts.branch !== false) g += `<path d="M6 86 Q60 80 116 88" stroke="#6b4f36" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+  g += `<g transform="rotate(${tilt} 55 58)">`;
+  g += `<polygon points="30,58 4,${s.cocked ? 30 : 70} 12,${s.cocked ? 26 : 78}" fill="${s.tail}"/>`;
+  g += `<ellipse cx="54" cy="58" rx="30" ry="21" fill="${s.body}"/>`;
+  g += `<ellipse cx="60" cy="66" rx="22" ry="13" fill="${s.belly}"/>`;
+  if (s.flank) g += `<ellipse cx="50" cy="68" rx="9" ry="5" fill="${s.flank}" opacity=".85"/>`;
+  g += `<ellipse cx="46" cy="54" rx="19" ry="11" fill="${s.wing}" transform="rotate(-12 46 54)"/>`;
+  if (s.bars) g += `<path d="M34 52 L56 49 M36 57 L57 55" stroke="${s.bars}" stroke-width="3" stroke-linecap="round"/>`;
+  g += `</g>`;
+  if (s.crest) g += `<polygon points="76,26 70,6 90,22" fill="${s.head}"/>`;
+  g += `<circle cx="84" cy="36" r="16" fill="${s.head}"/>`;
+  if (s.cap) g += `<path d="M68 34 A16 16 0 0 1 100 32 L96 30 Q84 24 70 36 Z" fill="${s.cap}"/>`;
+  if (s.nape) g += `<circle cx="71" cy="30" r="4" fill="${s.nape}"/>`;
+  if (s.bib) g += `<path d="M84 44 Q92 54 98 44 Z" fill="${s.bib}"/>`;
+  if (s.mask) g += `<path d="M90 30 Q101 34 100 44 Q92 46 86 40 Z" fill="${s.mask}"/>`;
+  if (s.brow) g += `<path d="M76 30 Q86 26 97 31" stroke="${s.brow}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  g += `<circle cx="91" cy="34" r="3" fill="#111"/><circle cx="92" cy="33" r="1" fill="#fff"/>`;
+  g += `<polygon points="98,35 ${s.cap && key === "downy" ? 116 : 112},38 98,42" fill="${s.beak}"/>`;
+  g += `<path d="M50 78 L48 86 M60 78 L60 86" stroke="#6a5644" stroke-width="2.5" stroke-linecap="round"/>`;
+  return `<svg viewBox="0 0 120 92" role="img" aria-label="${s.name}">${g}</svg>`;
+}
+
+
+// ---------- Screens, clock and idle reset ----------
+const views = ["home", "vChorus", "vReel", "vToday"].map(id => document.getElementById(id));
+let stopCurrent = null, idleTimer = null;
+const IDLE_MS = 90000;
+
+function show(id) {
+  if (stopCurrent) { stopCurrent(); stopCurrent = null; }
+  views.forEach(v => v.hidden = v.id !== id);
+  window.scrollTo(0, 0);
+  resetIdle();
+}
+function resetIdle() {
+  clearTimeout(idleTimer);
+  if (!document.getElementById("home").hidden) return;
+  idleTimer = setTimeout(() => show("home"), IDLE_MS);
+}
+["pointerdown", "keydown"].forEach(e => document.addEventListener(e, resetIdle, { passive: true }));
+document.querySelectorAll("[data-home]").forEach(b => b.addEventListener("click", () => show("home")));
+
+function tickClock() {
+  const d = new Date();
+  document.getElementById("clockTime").textContent = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  document.getElementById("clockDate").textContent = d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+}
+tickClock(); setInterval(tickClock, 15000);
+
+// ---------- Real media: the Pi drops these files next to this page. Missing files fall back to the samples. ----------
+const MEDIA = {
+  sunrise: "latest/sunrise.mp4",     // this morning's sunrise timelapse from the site's webcam (see kiosks/sites.json)
+  sunriseInfo: "latest/sunrise.json",
+  reelInfo: "latest/highlights.json",
+  chorus:  "latest/chorus.mp3",      // this morning's dawn chorus audio from cam4
+  reel:    "latest/highlights.mp4",  // stitched feeder highlights
+  drawing: "latest/birds.png",       // AI hand-drawn illustration of today's birds
+  today:   "latest/today.json",      // today's detections, written by the Pi every hour
+  chorusInfo: "latest/chorus.json",  // which morning the chorus clip is from, and its species in order
+  music:   "music.mp3",              // today's classical piece for Today's Bird Species, picked by cam4 each day
+  musicInfo: "music.json"            // its title, composer, performer and license, for the credit line
+};
+const CHORUS_VOLUME = 0.4;          // dawn chorus loudness (0 to 1)
+const VIEW_SEC = 20;                 // every button runs this long, then returns to the start screen
+const CARD_STEP = 10;                // Today's Bird Species: seconds between one bird card fading in and the next
+const MUSIC_VOLUME = 0.1;            // Today's Bird Species music (0 = silent, 1 = full)
+
+// Cache buster so tablets pick up the Pi's new files instead of yesterday's copies
+const bust = src => src + "?t=" + Math.floor(Date.now() / 300000);
+
+// Live data from the Pi. Stays null (and the page shows samples) until the files exist.
+let LIVE = null, CHORUS_INFO = null, SUNRISE_INFO = null, REEL_INFO = null;
+async function loadLive() {
+  try { const r = await fetch(bust(MEDIA.today)); LIVE = r.ok ? await r.json() : null; } catch (e) { LIVE = null; }
+  try { const r = await fetch(bust(MEDIA.chorusInfo)); CHORUS_INFO = r.ok ? await r.json() : null; } catch (e) { CHORUS_INFO = null; }
+  try { const r = await fetch(bust(MEDIA.sunriseInfo)); SUNRISE_INFO = r.ok ? await r.json() : null; } catch (e) { SUNRISE_INFO = null; }
+  try { const r = await fetch(bust(MEDIA.reelInfo)); REEL_INFO = r.ok ? await r.json() : null; } catch (e) { REEL_INFO = null; }
+  try {
+    const r = await fetch(bust(MEDIA.musicInfo)), m = r.ok ? await r.json() : null;
+    if (m && m.title) document.getElementById("musicCredit").textContent =
+      `${m.composer}, “${m.title},” ${m.by}` + (m.license ? ` (${m.license})` : "");
+  } catch (e) { /* keep the credit already on the page */ }
+  document.getElementById("reelSoon").hidden = !!REEL_INFO;
+}
+loadLive(); setInterval(loadLive, 5 * 60 * 1000);
+
+// Reload the whole page once a day (overnight, on the start screen) to pick up any page changes
+const bootDay = new Date().toDateString();
+setInterval(() => {
+  if (new Date().toDateString() !== bootDay && !document.getElementById("home").hidden) location.reload();
+}, 10 * 60 * 1000);
+
+const nameToKey = n => Object.keys(SPECIES).find(k => SPECIES[k].name === n);
+const fmtTime = hhmm => {
+  if (!hhmm) return "";
+  let [h, m] = hhmm.split(":").map(Number);
+  const ap = h < 12 ? "AM" : "PM"; h = h % 12 || 12;
+  return `${h}:${String(m).padStart(2, "0")} ${ap}`;
+};
+const fmtDay = iso => new Date(iso + "T12:00:00").toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function tryVideo(el, src) {
+  return new Promise(res => {
+    let done = false;
+    const fin = ok => { if (!done) { done = true; res(ok); } };
+    el.addEventListener("loadeddata", () => fin(true), { once: true });
+    el.addEventListener("error", () => fin(false), { once: true });
+    setTimeout(() => fin(false), 2500);
+    el.src = src; el.load();
+  });
+}
+function tryImage(img, src) {
+  return new Promise(res => {
+    img.onload = () => res(true); img.onerror = () => res(false);
+    setTimeout(() => res(false), 2500);
+    img.src = src;
+  });
+}
+function runTimer(bar, timers, onDone, secs = VIEW_SEC) {
+  const start = performance.now();
+  const iv = setInterval(() => {
+    const k = Math.min(1, (performance.now() - start) / (secs * 1000));
+    bar.style.width = (k * 100) + "%";
+    if (k >= 1) { clearInterval(iv); onDone(); }
+  }, 100);
+  timers.push(iv);
+  return start;
+}
+
+// ---------- 1. Sunrise and dawn chorus ----------
+function startChorus() {
+  show("vChorus");
+  const chips = document.getElementById("chips"); chips.innerHTML = "";
+  const bar = document.getElementById("chorusBar"); bar.style.width = "0";
+  const vid = document.getElementById("sunVideo"), cv = document.getElementById("skyCanvas");
+  const note = document.getElementById("chorusNote");
+  vid.hidden = true; cv.hidden = false; document.getElementById("sunCap").hidden = true; document.getElementById("sunTime").hidden = true; document.getElementById("sunPlace").hidden = true;
+  note.textContent = "Recorded outside at sunrise. This preview plays a recreated chorus.";
+  const timers = [];
+  let raf = 0, stopped = false, realAudio = null;
+
+  // Caption along the bottom of the picture: what you're hearing, then where the sunrise is from
+  const cap = document.getElementById("sunCap");
+  const kicker = document.getElementById("capKicker"), head = document.getElementById("capHead"), place = document.getElementById("sunPlace");
+  const setLower = (k, names, fallback) => {
+    head.textContent = names && names.length ? `${k}: ${names.join(" · ")}` : (fallback || k);
+    cap.hidden = false;
+  };
+  const listNames = names => names.length < 3 ? names.join(" and ") : names.slice(0, -1).join(", ") + ", and " + names[names.length - 1];
+
+  // Audio context is created inside the tap so the tablet allows sound.
+  const AC = window.AudioContext || window.webkitAudioContext;
+  let ctx = null; try { ctx = new AC(); } catch (e) {}
+
+  // Real sunrise video if the file exists
+  tryVideo(vid, bust(MEDIA.sunrise)).then(ok => {
+    if (ok && !stopped) {
+      cv.hidden = true; vid.hidden = false; vid.currentTime = 0; vid.play().catch(() => {});
+      const today = new Date().toLocaleDateString("en-CA");
+      const when = SUNRISE_INFO && SUNRISE_INFO.date && SUNRISE_INFO.date !== today ? `on ${fmtDay(SUNRISE_INFO.date)}` : "this morning";
+      place.textContent = `Sunrise at ${SUNRISE_INFO && SUNRISE_INFO.place ? SUNRISE_INFO.place : "Look Rock, Great Smoky Mountains"} ${when}`;
+      place.hidden = false;
+      // Clock showing when each webcam photo was taken, ticking forward as the timelapse plays
+      const times = SUNRISE_INFO && Array.isArray(SUNRISE_INFO.times) ? SUNRISE_INFO.times : [];
+      const clock = document.getElementById("sunTime");
+      if (times.length) {
+        const mins = times.map(t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; });
+        const tick = () => {
+          if (stopped) return;
+          const dur = vid.duration || VIEW_SEC, slot = dur / mins.length;
+          const i = Math.min(mins.length - 1, Math.floor(vid.currentTime / slot));
+          const frac = Math.min(1, (vid.currentTime - i * slot) / slot);
+          const m = i < mins.length - 1 ? mins[i] + (mins[i + 1] - mins[i]) * frac : mins[i];
+          const hh = Math.floor(m / 60), mm = Math.floor(m % 60);
+          clock.textContent = fmtTime(`${hh}:${String(mm).padStart(2, "0")}`);
+          requestAnimationFrame(tick);
+        };
+        clock.hidden = false; tick();
+      }
+    }
+  });
+
+  // Real chorus audio if the file exists, otherwise a recreated one
+  const au = new Audio(); au.preload = "auto"; au.volume = CHORUS_VOLUME;
+  let decided = false;
+  const useSynth = () => { if (decided || stopped) return; decided = true; synth(); };
+  const useReal = () => {
+    if (decided || stopped) return; decided = true; realAudio = au;
+    const today = new Date().toLocaleDateString("en-CA");
+    note.textContent = CHORUS_INFO && CHORUS_INFO.date && CHORUS_INFO.date !== today
+      ? `Recorded outside at sunrise on ${fmtDay(CHORUS_INFO.date)}.`
+      : "Recorded outside at sunrise this morning.";
+    const heardWhen = CHORUS_INFO && CHORUS_INFO.date && CHORUS_INFO.date !== today ? `on ${fmtDay(CHORUS_INFO.date)}` : "this morning";
+    const names = CHORUS_INFO && Array.isArray(CHORUS_INFO.order) ? [...new Set(CHORUS_INFO.order)] : [];
+    setLower(`Heard at Pendleton Library ${heardWhen}`, names, `Birds heard at Pendleton Library ${heardWhen}`);
+    showChips(CHORUS_INFO && CHORUS_INFO.order && CHORUS_INFO.order.length ? CHORUS_INFO.order : null, CHORUS_INFO && CHORUS_INFO.clip_sec || 3);
+    au.currentTime = 0; au.play().catch(useSynthForce);
+  };
+  const useSynthForce = () => { realAudio = null; synth(); };
+  au.addEventListener("canplay", useReal, { once: true });
+  au.addEventListener("error", useSynth, { once: true });
+  timers.push(setTimeout(useSynth, 1500));
+  au.src = bust(MEDIA.chorus);
+
+  function synth() {
+    showChips(null, 3);
+    setLower("Sample birdsong", null, "Sample birdsong · Pendleton Library recordings start after sunrise");
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const master = ctx.createGain(); master.gain.value = 0.0001; master.connect(ctx.destination);
+    master.gain.linearRampToValueAtTime(0.9, now + 1.5);
+    master.gain.setValueAtTime(0.9, now + VIEW_SEC - 3);
+    master.gain.linearRampToValueAtTime(0.0001, now + VIEW_SEC - 0.5);
+    const len = ctx.sampleRate * 2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+    let last = 0; for (let i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3; }
+    const air = ctx.createBufferSource(); air.buffer = buf; air.loop = true;
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 900;
+    const ag = ctx.createGain(); ag.gain.value = 0.18;
+    air.connect(lp).connect(ag).connect(master); air.start();
+
+    const tone = (t, f0, f1, dur, vol, pan) => {
+      const o = ctx.createOscillator(), g = ctx.createGain(), p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      o.type = "sine"; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      if (p) { p.pan.value = pan; o.connect(g).connect(p).connect(master); } else { o.connect(g).connect(master); }
+      o.start(t); o.stop(t + dur + 0.05);
+    };
+    const songs = {
+      cardinal: (t, p) => { for (let i = 0; i < 4; i++) tone(t + i * 0.32, 3800, 1900, 0.24, 0.12, p); for (let i = 0; i < 6; i++) tone(t + 1.4 + i * 0.1, 2600, 2300, 0.07, 0.08, p); return 2.2; },
+      titmouse: (t, p) => { for (let i = 0; i < 4; i++) { tone(t + i * 0.36, 3300, 3000, 0.12, 0.1, p); tone(t + i * 0.36 + 0.15, 2500, 2400, 0.14, 0.09, p); } return 1.5; },
+      chickadee: (t, p) => { tone(t, 4100, 3950, 0.32, 0.08, p); tone(t + 0.4, 3500, 3350, 0.3, 0.07, p); tone(t + 0.75, 3500, 3450, 0.25, 0.06, p); return 1.1; },
+      wren: (t, p) => { for (let i = 0; i < 4; i++) { const b = t + i * 0.34; tone(b, 3200, 4200, 0.08, 0.13, p); tone(b + 0.1, 4000, 2900, 0.1, 0.12, p); tone(b + 0.22, 2800, 2600, 0.08, 0.1, p); } return 1.4; },
+      goldfinch: (t, p) => { let x = t; for (let i = 0; i < 14; i++) { const f = 4200 + Math.random() * 2000; tone(x, f, f * (0.85 + Math.random() * 0.3), 0.05, 0.05, p); x += 0.06 + Math.random() * 0.07; } return x - t; }
+    };
+    const pans = { cardinal: -0.6, titmouse: 0.5, chickadee: -0.2, wren: 0.7, goldfinch: 0.1 };
+    const t0 = now + 0.3;
+    CHORUS_ORDER.forEach((sp, idx) => {
+      let t = 0.5 + idx * 3;
+      while (t < VIEW_SEC - 3) { t += songs[sp](t0 + t, pans[sp]) + 1 + Math.random() * 2; }
+    });
+  }
+
+  // Species chips appear one by one, in step with the clips in the real chorus
+  let chipsShown = false;
+  function showChips(names, step) {
+    if (chipsShown) return; chipsShown = true;
+    const list = names || CHORUS_ORDER.map(k => SPECIES[k].name);
+    const seen = new Set();
+    list.forEach((name, idx) => {
+      if (seen.has(name)) return; seen.add(name);
+      timers.push(setTimeout(() => {
+        const k = nameToKey(name);
+        const c = document.createElement("span"); c.className = "chip";
+        c.innerHTML = (k ? birdSVG(k, { branch: false }) : "") + esc(name); chips.appendChild(c);
+      }, (0.4 + idx * step) * 1000));
+    });
+  }
+  // Painted sunrise stands in until the sunrise camera is set up
+  const cx = cv.getContext("2d");
+  const start = runTimer(bar, timers, () => show("home"));
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const frame = (nowT) => {
+    const k = reduce ? 0.6 : Math.min(1, (nowT - start) / (VIEW_SEC * 1000));
+    const W = cv.width, H = cv.height;
+    const sky = cx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, `hsl(${215 - k * 15}, ${35 + k * 20}%, ${18 + k * 40}%)`);
+    sky.addColorStop(0.7, `hsl(${25 + k * 10}, ${55 + k * 20}%, ${45 + k * 22}%)`);
+    sky.addColorStop(1, `hsl(42, 85%, ${60 + k * 15}%)`);
+    cx.fillStyle = sky; cx.fillRect(0, 0, W, H);
+    const sunY = H * 0.86 - k * H * 0.38;
+    cx.fillStyle = `rgba(255, 214, 120, ${0.25 + k * 0.5})`;
+    cx.beginPath(); cx.arc(W * 0.62, sunY, 90, 0, Math.PI * 2); cx.fill();
+    cx.fillStyle = "#ffe7a8"; cx.beginPath(); cx.arc(W * 0.62, sunY, 55, 0, Math.PI * 2); cx.fill();
+    cx.fillStyle = "#1d2b25";
+    cx.beginPath(); cx.moveTo(0, H);
+    for (let x = 0; x <= W; x += 20) cx.lineTo(x, H * 0.8 - Math.abs(Math.sin(x * 0.031) * 60) - Math.abs(Math.sin(x * 0.11) * 18));
+    cx.lineTo(W, H); cx.fill();
+    if (!stopped && !reduce && k < 1) raf = requestAnimationFrame(frame);
+  };
+  raf = requestAnimationFrame(frame);
+
+  stopCurrent = () => {
+    stopped = true; cancelAnimationFrame(raf);
+    timers.forEach(t => { clearTimeout(t); clearInterval(t); });
+    au.pause(); au.removeAttribute("src");
+    vid.pause();
+    if (ctx) ctx.close().catch(() => {});
+  };
+}
+const CHORUS_ORDER = ["cardinal", "titmouse", "chickadee", "wren", "goldfinch"];
+
+// ---------- 2. Feeder highlights ----------
+const CLIPS = [
+  { sp: "cardinal",  time: "6:52 AM", conf: 0.96 },
+  { sp: "chickadee", time: "7:31 AM", conf: 0.93 },
+  { sp: "downy",     time: "8:05 AM", conf: 0.88 },
+  { sp: "goldfinch", time: "9:47 AM", conf: 0.91 },
+  { sp: "titmouse",  time: "2:38 PM", conf: 0.94 }
+];
+function startReel() {
+  show("vReel");
+  const reel = document.getElementById("reel"), bar = document.getElementById("reelBar"), vid = document.getElementById("reelVideo");
+  bar.style.width = "0"; vid.hidden = true;
+  const place = document.getElementById("reelPlace"), clock = document.getElementById("reelTime");
+  place.hidden = true; clock.hidden = true;
+  const timers = [];
+  let stopped = false;
+  // Until the feeder camera has made a reel, show the painting with a short note
+  reel.innerHTML = `<div class="soon-view"><img src="tile-videos.jpg" alt=""><div class="lower">Videos of birds at the Pendleton Library feeder are coming soon. The camera is being set up.</div></div>`;
+  const iv = 0;
+  tryVideo(vid, bust(MEDIA.reel)).then(ok => {
+    if (ok && !stopped) {
+      clearInterval(iv); reel.hidden = true; vid.hidden = false; vid.currentTime = 0; vid.play().catch(() => {});
+      const today = new Date().toLocaleDateString("en-CA");
+      const when = REEL_INFO && REEL_INFO.date && REEL_INFO.date !== today ? `on ${fmtDay(REEL_INFO.date)}` : "today";
+      // A reel shared from another VitalVisitors feeder says so instead of claiming to be from Pendleton Library
+      place.textContent = `${REEL_INFO && REEL_INFO.place ? REEL_INFO.place : "Bird feeder at Pendleton Library"} ${when}`;
+      place.hidden = false;
+      // Time of each visit, switching as the reel moves from one visit to the next
+      const times = REEL_INFO && Array.isArray(REEL_INFO.times) ? REEL_INFO.times : [];
+      if (times.length) {
+        const step = (REEL_INFO.clip_sec || 5) - (typeof REEL_INFO.xfade === "number" ? REEL_INFO.xfade : 0.5);
+        const tick = () => {
+          if (stopped) return;
+          const i = Math.min(times.length - 1, Math.floor((vid.currentTime + 0.25) / step));
+          clock.textContent = fmtTime(times[i]);
+          requestAnimationFrame(tick);
+        };
+        clock.hidden = false; tick();
+      }
+    }
+  });
+  runTimer(bar, timers, () => show("home"));
+  stopCurrent = () => { stopped = true; timers.forEach(t => clearInterval(t)); vid.pause(); reel.hidden = false; };
+}
+
+// ---------- 3. Today's birds ----------
+const TODAY = [
+  { sp: "cardinal",  n: 41, first: "6:48 AM" },
+  { sp: "wren",      n: 37, first: "6:55 AM" },
+  { sp: "titmouse",  n: 29, first: "7:02 AM" },
+  { sp: "chickadee", n: 24, first: "7:10 AM" },
+  { sp: "goldfinch", n: 18, first: "8:21 AM" },
+  { sp: "finch",     n: 15, first: "8:40 AM" },
+  { sp: "downy",     n: 9,  first: "9:15 AM" },
+  { sp: "nuthatch",  n: 6,  first: "10:33 AM" }
+];
+// Sample day for when there's no live data yet
+const SAMPLE_BEST = { cardinal: [[7, 9], [17, 19]], wren: [[7, 8], [16, 17]], titmouse: [[8, 10]], chickadee: [[8, 10], [15, 16]],
+  goldfinch: [[10, 12]], finch: [[12, 13], [16, 17]], downy: [[9, 10]], nuthatch: [[10, 11], [14, 15]] };
+
+const SAMPLE_MASS = { cardinal: 42.6, wren: 19, titmouse: 21.6, chickadee: 10, goldfinch: 13, finch: 21, downy: 27, nuthatch: 21 };
+const slugOf = name => name.toLowerCase().replace(/'/g, "").replace(/[^a-z0-9]+/g, " ").trim().replace(/ /g, "-");
+const hourName = h => h === 12 ? "noon" : h === 0 || h === 24 ? "midnight" : String(h % 12);
+const ampm = h => (h % 24) < 12 ? "AM" : "PM";
+// [7, 9] -> "7 to 9 AM";  [11, 13] -> "11 AM to 1 PM";  [12, 13] -> "Noon to 1 PM"
+function fmtWindow([a, b]) {
+  const words = h => h === 12 ? "noon" : h === 0 || h === 24 ? "midnight" : null;
+  const A = words(a) || hourName(a), B = words(b) || hourName(b);
+  const txt = words(a) || words(b) || ampm(a) !== ampm(b) ? `${A}${words(a) ? "" : " " + ampm(a)} to ${B}${words(b) ? "" : " " + ampm(b)}` : `${A} to ${B} ${ampm(b)}`;
+  return txt.charAt(0).toUpperCase() + txt.slice(1);
+}
+
+function renderGallery(list) {
+  const box = document.getElementById("gallery");
+  if (!list.length) { box.style.setProperty("--cols", 1); box.style.setProperty("--cardw", "100%"); box.innerHTML = `<div class="tl-empty"><b>Quiet so far today</b>Birds usually start singing around sunrise.</div>`; return { pages: [], more: [] }; }
+  const byCount = list.slice().sort((a, b) => b.count - a.count);
+  const startOf = b => b.best.length ? b.best[0][0] : 24;
+  const draw = rows => {
+    box.innerHTML = rows.map((b, i) => {
+      const when = b.best.length ? b.best.map(w => esc(fmtWindow(w))).join("<br>") : (b.first ? "Heard at " + fmtTime(b.first) : "");
+      const scale = b.mass ? Math.max(0.8, Math.min(1, 0.8 + 0.2 * (Math.log10(b.mass) - 1) / (Math.log10(700) - 1))) : 0.85;
+      const art = b.art
+        ? `<div class="art plate" style="--s:${scale.toFixed(2)}"><div class="holder"><img class="cut" src="${b.art}" alt=""></div></div>`
+        : `<div class="art blank"><span class="label">${esc(b.name)}</span></div>`;
+      const name = b.art ? `<span class="pname">${esc(b.name)}</span>` : "";
+      return `<div class="bird wait">${art}<div class="when">${name}<small>Best time to look</small><b>${when}</b></div></div>`;
+    }).join("");
+  };
+  // Measure the space and a caption (two time windows tall), then pick the layout that shows the most birds
+  // at a comfortable size: cards between 190 and 340 px wide, one or two rows
+  const W = box.clientWidth, H = box.clientHeight, gap = Math.max(12, Math.min(22, W * 0.02));
+  box.style.setProperty("--gap", gap + "px"); box.style.setProperty("--cols", 1); box.style.setProperty("--cardw", "260px");
+  const longest = byCount.reduce((a, b) => b.name.length > a.length ? b.name : a, "x");
+  draw([{ name: longest, best: [[7, 9], [17, 18]], art: "data:," }]);
+  const card = box.querySelector(".bird"), capH = card.offsetHeight - card.querySelector(".art").offsetHeight;
+  const n = Math.min(byCount.length, 8);
+  let best = null;
+  for (const rows of [1, 2]) for (let cols = 1; cols <= 4; cols++) {
+    if (rows * cols > Math.max(n, 1) && !(rows === 1 && cols <= n)) continue;
+    const w = Math.min(n <= 2 ? 480 : 340, (W - (cols - 1) * gap) / cols, (((H - (rows - 1) * gap) / rows) - capH - 6) * 4 / 3);
+    if (w < 190 && !(rows === 1 && cols === 1)) continue;
+    const shows = Math.min(n, rows * cols);
+    if (!best || shows > best.shows || (shows === best.shows && w > best.w)) best = { rows, cols, w, shows };
+  }
+  const per = best.shows;
+  box.style.setProperty("--cols", Math.min(best.cols, per)); box.style.setProperty("--cardw", Math.floor(best.w) + "px");
+  const pages = [];
+  for (let i = 0; i < byCount.length && pages.length < 3; i += per)
+    pages.push(byCount.slice(i, i + per).sort((a, b) => startOf(a) - startOf(b)));   // morning birds first
+  // Then check for real: if any card spills over (long names wrap on narrow cards), shrink until all fit
+  let w = Math.floor(best.w);
+  const fits = () => box.scrollHeight <= box.clientHeight + 2 &&
+    [...box.querySelectorAll(".bird")].every(c => c.scrollHeight <= c.clientHeight + 2);
+  const drawFit = rows => {
+    draw(rows);
+    while (!fits() && w > 150) { w = Math.floor(w * 0.95); box.style.setProperty("--cardw", w + "px"); }
+
+    paintPlates(box);
+  };
+  drawFit(pages[0]);
+  const shown = pages.flat();
+  return { pages, draw: drawFit, more: byCount.filter(b => !shown.includes(b)).map(b => b.name) };
+}
+
+// ---------- Drawing each bird: a pencil sketch first, then watercolor washes, then the finished plate ----------
+// Runs on a canvas over the (hidden) picture. When it finishes, the canvas holds the plain picture and stops
+// updating, so the bird sits still and sharp. If anything goes wrong, the picture simply fades in instead.
+const PLATE_STILL = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+function paintPlates(box) {
+  // Each whole card fades in CARD_STEP seconds after the one before; its bird starts drawing as it appears
+  box.querySelectorAll(".bird.wait").forEach((card, i) =>
+    setTimeout(() => { card.classList.remove("wait"); card.classList.add("in"); }, i * CARD_STEP * 1000 + 50));
+  box.querySelectorAll(".art.plate img.cut").forEach((img, i) => {
+    const plain = () => { img.style.opacity = 1; };
+    const go = () => { try { paintPlate(img, i * CARD_STEP + 0.6); } catch (e) { plain(); } };
+    if (img.complete && img.naturalWidth) go();
+    else { img.addEventListener("load", go, { once: true }); img.addEventListener("error", plain, { once: true }); }
+  });
+}
+function paintPlate(img, delay) {
+  const holder = img.parentElement, hr = holder.getBoundingClientRect(), r = img.getBoundingClientRect();
+  if (!r.width || !r.height) { img.style.opacity = 1; return; }
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const W = Math.max(2, Math.round(r.width * dpr)), H = Math.max(2, Math.round(r.height * dpr));
+  const mk = () => { const c = document.createElement("canvas"); c.width = W; c.height = H; return c; };
+  const color = mk(), cx = color.getContext("2d");
+  cx.drawImage(img, 0, 0, W, H);
+  const px = cx.getImageData(0, 0, W, H).data;        // fails for a picture from another site: the plain picture is shown
+
+  const cv = mk(); cv.className = "paintcv";
+  Object.assign(cv.style, { left: (r.left - hr.left) + "px", top: (r.top - hr.top) + "px", width: r.width + "px", height: r.height + "px" });
+  holder.appendChild(cv);
+  const ctx = cv.getContext("2d");
+  if (PLATE_STILL) { ctx.drawImage(color, 0, 0); return; }
+
+  // Pencil sketch: the picture's edges, plus light shading where the feathers are dark
+  const N = W * H, L = new Float32Array(N), A = new Float32Array(N);
+  for (let p = 0, q = 0; p < N; p++, q += 4) {
+    const a = px[q + 3] / 255; A[p] = a;
+    L[p] = (0.3 * px[q] + 0.59 * px[q + 1] + 0.11 * px[q + 2]) / 255 * a + (1 - a);
+  }
+  const sk = mk(), sx = sk.getContext("2d"), out = sx.createImageData(W, H), o = out.data;
+  let x0 = W, y0 = H, x1 = 0, y1 = 0;
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    const p = y * W + x;
+    if (A[p] > 0.5) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    const gx = L[p - W + 1] + 2 * L[p + 1] + L[p + W + 1] - L[p - W - 1] - 2 * L[p - 1] - L[p + W - 1];
+    const gy = L[p + W - 1] + 2 * L[p + W] + L[p + W + 1] - L[p - W - 1] - 2 * L[p - W] - L[p - W + 1];
+    const e = Math.min(1, Math.max(0, (Math.hypot(gx, gy) - 0.16) * 1.5));
+    const a = Math.max(e, (1 - L[p]) * A[p] * 0.32), q = p * 4;
+    o[q] = 62; o[q + 1] = 50; o[q + 2] = 38; o[q + 3] = a * 230;
+  }
+  sx.putImageData(out, 0, 0);
+  if (x1 <= x0) { x0 = 0; y0 = 0; x1 = W; y1 = H; }
+
+  // Where the pencil goes: loose back-and-forth strokes from the top of the bird down
+  const S = Math.min(W, H), lw = S * 0.11, bw = x1 - x0, strokes = [];
+  for (let y = y0 - lw * 0.3, k = 0; y < y1 + lw * 0.6; y += lw * 0.55, k++) {
+    const pts = [], n = 6, slope = (Math.random() - 0.5) * lw * 0.8;
+    for (let j = 0; j <= n; j++) {
+      const f = k % 2 ? 1 - j / n : j / n;
+      pts.push([x0 - lw * 0.4 + f * (bw + lw * 0.8), y + slope * (f - 0.5) + (Math.random() - 0.5) * lw * 0.35]);
+    }
+    strokes.push(pts);
+  }
+  // Where the paint goes: a few broad washes, then smaller touches, each a soft spreading blob
+  const spots = [], grid = Math.max(3, Math.round(S / 45));
+  for (let y = 0; y < H; y += grid) for (let x = 0; x < W; x += grid) if (A[y * W + x] > 0.5) spots.push([x, y]);
+  const pick = (n, rmin, rmax) => Array.from({ length: n }, () => {
+    const [x, y] = spots[(Math.random() * spots.length) | 0] || [W / 2, H / 2];
+    return { x, y, R: S * (rmin + Math.random() * (rmax - rmin)) };
+  });
+  const washes = pick(14, 0.2, 0.3).sort((a, b) => (a.y + a.x * 0.35) - (b.y + b.x * 0.35));
+  const dabs = washes.concat(pick(40, 0.06, 0.12));
+
+  const sm = mk(), smx = sm.getContext("2d"), pm = mk(), pmx = pm.getContext("2d"), tmp = mk(), tx = tmp.getContext("2d");
+  smx.lineCap = smx.lineJoin = "round"; smx.lineWidth = lw; smx.strokeStyle = "#000";
+  const SKETCH = 1.6, P0 = 1.0, P1 = 3.8, GROW = 0.7, END = 4.5;
+  const ease = k => 1 - Math.pow(1 - k, 3);
+  const blob = (d, k) => {
+    const rr = d.R * ease(k);
+    if (rr < 1) return;
+    const g = pmx.createRadialGradient(d.x, d.y, 0, d.x, d.y, rr);
+    g.addColorStop(0, "rgba(0,0,0,.9)"); g.addColorStop(0.55, "rgba(0,0,0,.6)"); g.addColorStop(1, "rgba(0,0,0,0)");
+    pmx.fillStyle = g; pmx.beginPath(); pmx.arc(d.x, d.y, rr, 0, Math.PI * 2); pmx.fill();
+  };
+  let start = null, sDone = 0;
+  const frame = now => {
+    if (!cv.isConnected) return;                     // the page turned or the screen closed
+    if (start === null) start = now + delay * 1000;
+    const t = (now - start) / 1000;
+    if (t < 0) return requestAnimationFrame(frame);
+    // pencil: whole strokes so far, plus part of the current one
+    const sk_k = Math.min(1, t / SKETCH) * strokes.length, whole = Math.floor(sk_k);
+    const line = (pts, upto) => {
+      smx.beginPath(); smx.moveTo(pts[0][0], pts[0][1]);
+      const last = Math.min(pts.length - 1, Math.floor(upto));
+      for (let j = 1; j <= last; j++) smx.lineTo(pts[j][0], pts[j][1]);
+      const f = upto - Math.floor(upto);
+      if (f > 0 && last < pts.length - 1) {
+        const a = pts[last], b = pts[last + 1];
+        smx.lineTo(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f);
+      }
+      smx.stroke();
+    };
+    while (sDone < Math.min(whole, strokes.length)) line(strokes[sDone++], strokes[0].length);
+    if (sDone < strokes.length) line(strokes[sDone], (sk_k - whole) * (strokes[0].length - 1));
+    // paint: each blob spreads over GROW seconds, one after another
+    const span = P1 - P0 - GROW;
+    dabs.forEach((d, i) => {
+      if (d.done) return;
+      const k = (t - (P0 + span * i / dabs.length)) / GROW;
+      if (k <= 0) return;
+      blob(d, Math.min(1, k));
+      if (k >= 1) d.done = true;
+    });
+    const fin = t > P1 ? Math.min(1, (t - P1) / (END - P1)) : 0;
+    ctx.clearRect(0, 0, W, H);
+    tx.globalCompositeOperation = "source-over"; tx.clearRect(0, 0, W, H); tx.drawImage(sk, 0, 0);
+    tx.globalCompositeOperation = "destination-in"; tx.drawImage(sm, 0, 0);
+    ctx.globalAlpha = 1 - fin; ctx.drawImage(tmp, 0, 0);
+    tx.globalCompositeOperation = "source-over"; tx.clearRect(0, 0, W, H); tx.drawImage(color, 0, 0);
+    tx.globalCompositeOperation = "destination-in"; tx.drawImage(pm, 0, 0);
+    ctx.globalAlpha = 1; ctx.drawImage(tmp, 0, 0);
+    if (fin > 0) { ctx.globalAlpha = fin; ctx.drawImage(color, 0, 0); ctx.globalAlpha = 1; }
+    if (t >= END) { ctx.clearRect(0, 0, W, H); ctx.drawImage(color, 0, 0); return; }   // finished: still and sharp
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
+// Music for the bird gallery: a short public-licensed excerpt of Vivaldi's "Spring" (music.mp3, made on the Pi)
+let music = null;
+function playMusic() {
+  stopMusic(true);
+  const au = new Audio(bust(MEDIA.music)); au.volume = 0; au.loop = true; music = au;   // loops if the screen outlasts the music
+  au.play().then(() => {
+    const t0 = performance.now();
+    const iv = setInterval(() => { if (music !== au) return clearInterval(iv);
+      au.volume = Math.min(MUSIC_VOLUME, (performance.now() - t0) / 1500 * MUSIC_VOLUME); if (au.volume >= MUSIC_VOLUME) clearInterval(iv); }, 50);
+  }).catch(() => {});       // no music file yet: stay quiet
+}
+function stopMusic(now) {
+  const au = music; music = null; if (!au) return;
+  if (now) { au.pause(); return; }
+  const v0 = au.volume, t0 = performance.now();
+  const iv = setInterval(() => { const k = (performance.now() - t0) / 1200;
+    au.volume = Math.max(0, v0 * (1 - k)); if (k >= 1) { clearInterval(iv); au.pause(); } }, 50);
+}
+
+function startToday() {
+  show("vToday");
+  const bar = document.getElementById("todayBar"); bar.style.width = "0";
+  const timers = [];
+  const note = document.getElementById("todayNote");
+  const live = LIVE && Array.isArray(LIVE.species);
+  const list = live
+    ? LIVE.species.map(b => ({ name: b.name, count: b.count || 1, first: b.first, best: Array.isArray(b.best) ? b.best : [],
+        img: bust("birds/" + (b.slug || slugOf(b.name)) + ".jpg"), art: b.art ? bust(b.art) : "", mass: b.mass_g }))
+    : TODAY.map(b => ({ name: SPECIES[b.sp].name, count: b.n, best: SAMPLE_BEST[b.sp], img: "birds/" + slugOf(SPECIES[b.sp].name) + ".jpg",
+        art: "birds/" + slugOf(SPECIES[b.sp].name) + ".webp", mass: SAMPLE_MASS[b.sp] }));
+  // One screenful of birds, fading in one card at a time; any others are listed under "Also heard"
+  const g = renderGallery(list), shown = g.pages[0] || [];
+  const more = list.filter(b => !shown.includes(b)).sort((a, b) => b.count - a.count).map(b => b.name);
+  const secs = Math.max(VIEW_SEC, (shown.length - 1) * CARD_STEP + 10);
+  const left = live ? `<span><b>${list.length}</b> kind${list.length === 1 ? "" : "s"} of bird heard ${list.length ? "so far " : ""}today</span>` : `<span>Sample day shown</span>`;
+  const mid = more.length ? `<span>Also heard: ${more.map(esc).join(", ")}</span>` : "";
+  const right = live && LIVE.updated ? `<span>Updated ${fmtTime(LIVE.updated.slice(11, 16))}</span>` : "";
+  note.innerHTML = left + mid + right;
+  const box = document.getElementById("drawing"); box.hidden = true;
+  tryImage(document.getElementById("drawingImg"), bust(MEDIA.drawing)).then(ok => { box.hidden = !ok; });
+  playMusic();
+  runTimer(bar, timers, () => show("home"), secs);
+  stopCurrent = () => { timers.forEach(t => clearInterval(t)); stopMusic(); };
+}
+
+document.getElementById("tChorus").addEventListener("click", startChorus);
+document.getElementById("tReel").addEventListener("click", startReel);
+document.getElementById("tToday").addEventListener("click", startToday);
+</script>
