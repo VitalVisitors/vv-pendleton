@@ -209,6 +209,80 @@ h1 { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 5.5vw
 </div>
 
 <script>
+// Lets the website's all-sites page play this kiosk inside itself. Does nothing when the kiosk is
+// opened on its own. kiosks/build.py puts this in every built page, ahead of the page's own script.
+//
+//   address ends "#show=chorus" | "#show=reel" | "#show=today"   open that screen straight away
+//   add ",muted"                                                 start with the sound off
+//   the outer page sends {vv: "mute", on: true|false}            turn the sound off or on
+//   this page sends the outer page {vv: "home"}                  the screen ended or Back was pressed
+(function () {
+  if (window.parent === window) return;
+  var want = (location.hash.match(/show=(chorus|reel|today)/) || [])[1];
+  var muted = /muted/.test(location.hash);
+  var gains = [], contexts = [], sounds = [];
+
+  function apply() {
+    gains.forEach(function (g) { g.gain.value = muted ? 0 : 1; });
+    sounds.forEach(function (a) { a.muted = muted; });
+  }
+
+  // Every sound the page makes goes through one of these two, so they can all be switched together.
+  ["AudioContext", "webkitAudioContext"].forEach(function (name) {
+    var Real = window[name];
+    if (!Real) return;
+    var Wrapped = function (options) {
+      var ctx = options === undefined ? new Real() : new Real(options);
+      var out = ctx.destination, gain = ctx.createGain();
+      gain.connect(out);
+      Object.defineProperty(ctx, "destination", { get: function () { return gain; } });
+      gains.push(gain); contexts.push(ctx); apply();
+      return ctx;
+    };
+    Wrapped.prototype = Real.prototype;
+    window[name] = Wrapped;
+  });
+  var RealAudio = window.Audio;
+  var WrappedAudio = function (src) {
+    var a = src === undefined ? new RealAudio() : new RealAudio(src);
+    var play = a.play.bind(a), pause = a.pause.bind(a);
+    a.play = function () { a.vvWanted = true; return play(); };
+    a.pause = function () { a.vvWanted = false; return pause(); };
+    sounds.push(a); a.muted = muted;
+    return a;
+  };
+  WrappedAudio.prototype = RealAudio.prototype;
+  window.Audio = WrappedAudio;
+
+  window.addEventListener("message", function (e) {
+    if (e.data && e.data.vv === "mute") { muted = !!e.data.on; apply(); }
+  });
+
+  // Some browsers will not start sound in an inner page until it is touched. The first touch starts it.
+  document.addEventListener("pointerdown", function () {
+    contexts.forEach(function (c) { if (c.state === "suspended") c.resume(); });
+    sounds.forEach(function (a) { if (a.vvWanted && a.paused) a.play().catch(function () {}); });
+  }, true);
+
+  window.addEventListener("load", function () {
+    var home = document.getElementById("home"), left = false;
+    if (!home) return;
+    // Coming back to the kiosk's own start screen means "finished": hand control back to the outer page.
+    new MutationObserver(function () {
+      if (!home.hidden && left) window.parent.postMessage({ vv: "home" }, "*");
+      if (home.hidden) left = true;
+    }).observe(home, { attributes: true, attributeFilter: ["hidden"] });
+    if (!want) return;
+    var tile = document.getElementById({ chorus: "tChorus", reel: "tReel", today: "tToday" }[want]), tries = 0;
+    (function open() {
+      if (!tile) return;
+      if (!tile.disabled) { tile.click(); return; }
+      if (++tries < 40) setTimeout(open, 250);          // the videos tile wakes up once the page has its list
+    })();
+  });
+})();
+</script>
+<script>
 // ---------- Bird illustrations (simple, friendly field-guide style) ----------
 const SPECIES = {
   cardinal:  { name: "Northern Cardinal",      body:"#c4282d", belly:"#d8413f", head:"#c4282d", wing:"#9e1f24", tail:"#9e1f24", beak:"#f0883a", crest:true, mask:"#1b1b1b" },
