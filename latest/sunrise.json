@@ -1,16 +1,17 @@
 {
- "date": "2026-11-27",
- "sunrise": "07:16",
+ "date": "2026-11-28",
+ "sunrise": "07:17",
  "frames": 7,
  "times": [
   "07:00",
-  "07:10",
-  "07:26",
-  "07:41",
-  "07:56",
+  "07:15",
+  "07:25",
+  "07:40",
+  "07:55",
   "08:11",
   "08:26"
  ],
  "place": "Look Rock, Great Smoky Mountains",
- "source": "Look Rock, Great Smoky Mountains National Park (NPS webcam)"
+ "source": "Look Rock, Great Smoky Mountains National Park (NPS webcam)",
+ "credit": "National Park Service"
 }
