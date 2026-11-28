@@ -132,7 +132,7 @@ h1 { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 5.5vw
 .bird .art.plate canvas.paintcv { position: absolute; pointer-events: none; filter: drop-shadow(0 3px 4px rgba(70, 50, 20, .18)); }
 .bird .art.plate .label { position: absolute; left: 0; right: 0; bottom: 0; background: none; color: #3d4a3a; -webkit-backdrop-filter: none; backdrop-filter: none; font-size: .78em; padding: 0 .6em .35em; }
 .gallery.fade { opacity: 0; }
-.gallery { transition: opacity .6s ease; }
+.gallery { transition: opacity .6s ease, transform 1.4s ease; }
 .bird.wait { opacity: 0; transform: translateY(14px); }
 .bird.in { opacity: 1; transform: none; transition: opacity 1.4s ease, transform 1.4s ease; }
 .bird { display: flex; flex-direction: column; background: var(--panel); border: 3px solid var(--line); border-radius: 24px; overflow: hidden; }
@@ -785,8 +785,14 @@ function renderGallery(list) {
 const PLATE_STILL = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
 function paintPlates(box) {
   // Each whole card fades in CARD_STEP seconds after the one before; its bird starts drawing as it appears
-  box.querySelectorAll(".bird.wait").forEach((card, i) =>
-    setTimeout(() => { card.classList.remove("wait"); card.classList.add("in"); }, i * CARD_STEP * 1000 + 50));
+  // While the first row is still filling, slide it so the cards that have appeared sit in the middle of the screen.
+  const waiting = [...box.querySelectorAll(".bird.wait")], total = waiting.length;
+  const across = Math.min(total, parseInt(box.style.getPropertyValue("--cols")) || 1);
+  const step = (parseFloat(box.style.getPropertyValue("--cardw")) || 0) + (parseFloat(box.style.getPropertyValue("--gap")) || 0);
+  const centre = seen => { box.style.transform = seen < across ? `translateX(${(across - seen) * step / 2}px)` : ""; };
+  box.style.transition = "none"; centre(1); void box.offsetWidth; box.style.transition = "";
+  waiting.forEach((card, i) =>
+    setTimeout(() => { card.classList.remove("wait"); card.classList.add("in"); centre(i + 1); }, i * CARD_STEP * 1000 + 50));
   box.querySelectorAll(".art.plate img.cut").forEach((img, i) => {
     const plain = () => { img.style.opacity = 1; };
     const go = () => { try { paintPlate(img, i * CARD_STEP + 0.6); } catch (e) { plain(); } };
