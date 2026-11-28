@@ -2,7 +2,7 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- Built by kiosks/build.py for pendleton (VV-0014). Edit the template or sites.json, not this file. -->
+<!-- Built by kiosks/build.py for pendleton (VV-0013). Edit the template or sites.json, not this file. -->
 <title>Pendleton Library Bird Kiosk</title>
 <!-- Icons: Phosphor Icons (MIT), phosphoricons.com -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -143,6 +143,11 @@ h1 { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 5.5vw
 .bird .art.blank .label { position: static; background: none; color: var(--pine); font-size: 1.15em; padding: 0 .8em; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .bird .when { padding: .45em .8em .6em; text-align: center; }
 .bird .when .pname { display: block; font-family: var(--display); font-weight: 800; font-size: .92em; line-height: 1.15; margin-bottom: .25em; }
+/* On a wide, short screen (the kiosk playing inside the website) the picture sits beside the words, so the words keep their room */
+.gallery.side .bird { flex-direction: row; align-items: stretch; min-height: calc(var(--cardw, 400px) * .3); }
+.gallery.side .bird .art { flex: 0 0 40%; aspect-ratio: auto; }
+.gallery.side .bird .when { flex: 1 1 0; min-width: 0; align-self: center; padding: .5em .9em; }
+.gallery.side .bird .when small { white-space: normal; }
 .bird .when small { display: block; white-space: nowrap; color: var(--muted); font-size: .62em; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
 .bird .when b { display: block; font-family: var(--display); font-weight: 800; font-size: 1em; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .tl-empty { margin: auto; text-align: center; color: var(--muted); grid-column: 1 / -1; padding: 2em 0; }
@@ -726,6 +731,7 @@ function renderGallery(list) {
   };
   // Measure the space and a caption (two time windows tall), then pick the layout that shows the most birds
   // at a comfortable size: cards between 190 and 340 px wide, one or two rows
+  box.classList.remove("side");
   const W = box.clientWidth, H = box.clientHeight, gap = Math.max(12, Math.min(22, W * 0.02));
   box.style.setProperty("--gap", gap + "px"); box.style.setProperty("--cols", 1); box.style.setProperty("--cardw", "260px");
   const longest = byCount.reduce((a, b) => b.name.length > a.length ? b.name : a, "x");
@@ -739,6 +745,19 @@ function renderGallery(list) {
     if (w < 190 && !(rows === 1 && cols === 1)) continue;
     const shows = Math.min(n, rows * cols);
     if (!best || shows > best.shows || (shows === best.shows && w > best.w)) best = { rows, cols, w, shows };
+  }
+  // Cards squeezed narrow by a short screen crowd their words. If there is room across, lay each card on its side instead.
+  if (best.w < 230) {
+    let side = null;
+    for (const rows of [1, 2, 3]) for (let cols = 1; cols <= 3; cols++) {
+      if (rows * cols > Math.max(n, 1) && !(rows === 1 && cols <= n)) continue;
+      const w = Math.min(520, (W - (cols - 1) * gap) / cols), h = Math.max(capH + 12, w * 0.3);
+      if (w < 300 || rows * h + (rows - 1) * gap > H) continue;
+      const shows = Math.min(n, rows * cols);
+      if (!side || shows > side.shows || (shows === side.shows && w > side.w)) side = { rows, cols, w, shows };
+    }
+    // Fewer birds at a time is fine: the screen turns to the next ones by itself.
+    if (side) { best = side; box.classList.add("side"); }
   }
   const per = best.shows;
   box.style.setProperty("--cols", Math.min(best.cols, per)); box.style.setProperty("--cardw", Math.floor(best.w) + "px");
